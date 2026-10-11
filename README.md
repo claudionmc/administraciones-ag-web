@@ -44,6 +44,8 @@ Las tarjetas de la portada muestran un resumen y las aclaraciones de alcance;
 el catálogo `/servicios` desarrolla tres áreas con cuatro servicios descritos
 por área, navegación interna y llamadas a contacto. Sus datos y textos están
 tipados en `src/lib/services.ts`; `ServiceAreaSection` compone cada área.
+Las áreas y servicios se presentan sin numeraciones decorativas; el proceso
+mantiene sus cuatro pasos con numeración discreta.
 `/contacto` presenta las modalidades de atención y el CTA de WhatsApp en dos
 columnas desde el breakpoint de escritorio y una columna en pantallas menores.
 El encabezado muestra el logotipo navy y el pie su variante blanca suministrada.
@@ -54,11 +56,20 @@ disponga del PNG individual, podrá sustituirse la lámina en este componente.
 El diseño usa Inter, fondos navy, blancos y grises, con acentos corporativos.
 El hero incorpora «Geometría y reflejos», una imagen original generada con
 ChatGPT y suministrada por Claudio, quien confirmó su origen el 10 de octubre
-de 2026. El archivo seleccionado es `fondo_geometrico_3.png`, almacenado en
+de 2026. El archivo seleccionado es `fondo_geometrico_3_2x.png`, ampliado 2×
+por el usuario a partir de `fondo_geometrico_3.png`, almacenado en
 `public/images/architecture/geometria-y-reflejos.png`. No representa oficinas
 de la empresa. `HeroPhoto` usa `next/image`, importación estática, tamaños
 adaptables, precarga y placeholder de desenfoque. El texto permanece sobre navy
 y separado de la imagen; en móvil la imagen aparece debajo del texto.
+El PNG actual mide 3344 × 1882 px (4,94 MB) y coincide con el archivo 2× recibido.
+La foto usa calidad 90; `sizes` considera el ancho de imagen necesario antes
+del recorte `object-cover`, conservando la posición horizontal al 65 %.
+En escritorio el recorte requiere hasta unos 983 × 553 px a densidad 1×.
+La versión suministrada cubre las dimensiones necesarias para densidad 2×;
+su detalle procede del upscaling realizado por el usuario. Next.js genera
+versiones WebP adaptadas al dispositivo; no se descarga el PNG completo para
+mostrar el hero. El tamaño servido depende de la resolución seleccionada.
 Las animaciones discretas respetan `prefers-reduced-motion`; la navegación y
 los enlaces disponen de foco visible y enlace para saltar al contenido.
 No hay formulario, envío de datos, backend ni datos de contacto inventados.
