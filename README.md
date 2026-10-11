@@ -32,6 +32,8 @@ localmente en el sitio compilado.
 - `src/app`: layout global y rutas `/`, `/servicios` y `/contacto`.
 - `src/components/ui`: botón, enlace con apariencia de botón y contenedor.
 - `src/components`: encabezado y pie compartidos, con navegación adaptable.
+- `SiteNavigation`: identifica la página activa con subrayado fino, Inter 500
+  y `aria-current="page"`; usa azul corporativo en el encabezado y blanco en el pie.
 - `src/lib/constants.ts`: información corporativa y navegación.
 - `src/lib/services.ts`: catálogo tipado de doce servicios en tres áreas.
 - `src/app/globals.css`: paletas completas, colores semánticos y estilos base.
@@ -63,15 +65,36 @@ de la empresa. `HeroPhoto` usa `next/image`, importación estática, tamaños
 adaptables, precarga y placeholder de desenfoque. El texto permanece sobre navy
 y separado de la imagen; en móvil la imagen aparece debajo del texto.
 El PNG actual mide 3344 × 1882 px (4,94 MB) y coincide con el archivo 2× recibido.
-La foto usa calidad 90; `sizes` considera el ancho de imagen necesario antes
-del recorte `object-cover`, conservando la posición horizontal al 65 %.
-En escritorio el recorte requiere hasta unos 983 × 553 px a densidad 1×.
+La foto usa calidad 90 y conserva su proporción natural, sin recortes ni
+deformaciones. `sizes` refleja el ancho real de la columna derecha: hasta unos
+545 px en escritorio, con resoluciones adaptadas para pantallas Retina.
+El lema y su texto secundario se integran debajo de la descripción de la
+columna izquierda; la columna derecha queda dedicada a la fotografía.
 La versión suministrada cubre las dimensiones necesarias para densidad 2×;
 su detalle procede del upscaling realizado por el usuario. Next.js genera
 versiones WebP adaptadas al dispositivo; no se descarga el PNG completo para
 mostrar el hero. El tamaño servido depende de la resolución seleccionada.
 Las animaciones discretas respetan `prefers-reduced-motion`; la navegación y
 los enlaces disponen de foco visible y enlace para saltar al contenido.
+El encabezado utiliza una fila con logo y menú desplegable en teléfonos y
+tablets hasta 1023 px. Desde 1024 px mantiene la navegación completa; esta
+transición evita comprimir el logo, enlaces y CTA en tablets de 768 px.
+El menú dispone de controles accesibles, se cierra al seleccionar una opción,
+al pulsar el botón o con Escape, y ocupa espacio normal sin cubrir el contenido.
+Hasta 767 px, el hero reduce espaciados y oculta la franja inferior de servicios.
+La imagen conserva sus proporciones y los textos y destinos de los CTA se mantienen.
+El indicador de desarrollo de Next.js se desactiva con `devIndicators: false`
+en `next.config.ts`, sin reglas CSS; no forma parte de la versión de producción.
+
+Validación responsive: las rutas `/`, `/servicios` y `/contacto` se comprobaron
+en Edge mediante Playwright temporal (sin dependencias nuevas en el proyecto),
+en 320 × 720, 375 × 667, 393 × 852, 430 × 932, **440 × 956**, 768 × 1024,
+1024 × 900 y 1440 × 900 px. Pasaron 24 combinaciones de página y viewport,
+incluyendo comprobaciones de desbordamiento, orden y proporción de imagen,
+menú desplegable, cierre con Escape y foco, navegación y enlace de WhatsApp.
+Se inspeccionaron capturas de 440 px y 1440 px. Esta emulación no sustituye
+la prueba de Safari en un iPhone físico.
+
 No hay formulario, envío de datos, backend ni datos de contacto inventados.
 El botón de WhatsApp en `/contacto` abre el número y mensaje configurados en
 `src/lib/constants.ts`: «Solicitar asesoría» es el texto visible y «Solicitar una
