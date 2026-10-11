@@ -40,12 +40,25 @@ localmente en el sitio compilado.
 La portada institucional incluye hero, tres áreas de servicios, filosofía,
 proceso de cuatro etapas y llamada a contacto. Las secciones se encuentran en
 `src/components/home/` y reutilizan el catálogo centralizado.
+Las tarjetas de la portada muestran un resumen y las aclaraciones de alcance;
+el catálogo `/servicios` desarrolla tres áreas con cuatro servicios descritos
+por área, navegación interna y llamadas a contacto. Sus datos y textos están
+tipados en `src/lib/services.ts`; `ServiceAreaSection` compone cada área.
+`/contacto` presenta las modalidades de atención y el CTA de WhatsApp en dos
+columnas desde el breakpoint de escritorio y una columna en pantallas menores.
 El encabezado muestra el logotipo navy y el pie su variante blanca suministrada.
 `BrandLogo` delimita mediante CSS la zona del logo en la lámina original
 `public/images/logo/brand-style-guide.png`, sin alterar sus píxeles ni proporciones.
 Los rótulos y las otras variantes quedan fuera del área visible. Cuando se
 disponga del PNG individual, podrá sustituirse la lámina en este componente.
 El diseño usa Inter, fondos navy, blancos y grises, con acentos corporativos.
+El hero incorpora «Geometría y reflejos», una imagen original generada con
+ChatGPT y suministrada por Claudio, quien confirmó su origen el 10 de octubre
+de 2026. El archivo seleccionado es `fondo_geometrico_3.png`, almacenado en
+`public/images/architecture/geometria-y-reflejos.png`. No representa oficinas
+de la empresa. `HeroPhoto` usa `next/image`, importación estática, tamaños
+adaptables, precarga y placeholder de desenfoque. El texto permanece sobre navy
+y separado de la imagen; en móvil la imagen aparece debajo del texto.
 Las animaciones discretas respetan `prefers-reduced-motion`; la navegación y
 los enlaces disponen de foco visible y enlace para saltar al contenido.
 No hay formulario, envío de datos, backend ni datos de contacto inventados.
