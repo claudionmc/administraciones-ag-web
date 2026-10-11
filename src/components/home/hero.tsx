@@ -4,7 +4,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { COMPANY } from "@/lib/constants";
 import { HeroPhoto } from "@/components/home/hero-photo";
 export function Hero() {
-  return <section aria-labelledby="hero-title" className="bg-primary text-white"><Container className="pb-8 pt-10 md:pb-10 md:pt-20 lg:pt-24">
+  return <section aria-labelledby="hero-title" className="bg-primary text-white"><Container className="pb-8 pt-10 md:pb-10 md:pt-20 lg:pb-8 lg:pt-24">
     <div className="grid items-center gap-8 md:gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-12"><div className="hero-enter min-w-0">
       <p className="eyebrow text-accent">Asesoría personal · Chile</p>
       <h1 id="hero-title" className="mt-4 max-w-3xl text-4xl font-medium leading-[1.18] tracking-tight text-balance md:mt-6 md:text-5xl lg:text-[3.25rem]">Una visión integral para sus decisiones financieras y patrimoniales.</h1>
@@ -17,6 +17,6 @@ export function Hero() {
     </div><div className="min-w-0">
       <HeroPhoto />
     </div></div>
-    <div className="mt-20 hidden flex-wrap justify-between gap-x-8 gap-y-3 border-t border-accent/25 pt-6 text-xs tracking-wide text-on-dark md:flex"><span>Asesoría tributaria</span><span>Planificación financiera</span><span>Planificación y análisis patrimonial</span></div>
+    <div className="mt-20 hidden flex-wrap justify-between gap-x-8 gap-y-3 border-t border-accent/25 pt-6 text-xs tracking-wide text-on-dark md:flex lg:mt-14"><span>Asesoría tributaria</span><span>Planificación financiera</span><span>Planificación y análisis patrimonial</span></div>
   </Container></section>;
 }

@@ -13,7 +13,7 @@ export default function ContactPage() {
     <Container>
       <p className="eyebrow text-primary-action">Contacto</p>
       <h1 id="contact-page-title" className="mt-5 max-w-3xl text-4xl font-medium leading-tight tracking-tight text-primary text-balance sm:text-5xl">Conversemos sobre lo que usted necesita.</h1>
-      <div className="mt-12 grid items-start gap-10 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:gap-16">
+      <div className="mt-7 grid items-start gap-10 md:mt-12 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:gap-16">
         <div>
           <p className="max-w-xl leading-8 text-text-muted">El primer paso es comprender su situación y el tipo de apoyo que busca. A partir de esa conversación, podremos definir el alcance de una asesoría tributaria, financiera o patrimonial.</p>
           <h2 className="mt-10 text-xl font-medium text-primary">Modalidades de atención</h2>

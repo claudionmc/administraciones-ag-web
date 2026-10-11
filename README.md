@@ -48,6 +48,10 @@ por área, navegación interna y llamadas a contacto. Sus datos y textos están
 tipados en `src/lib/services.ts`; `ServiceAreaSection` compone cada área.
 Las áreas y servicios se presentan sin numeraciones decorativas; el proceso
 mantiene sus cuatro pasos con numeración discreta.
+Los principios de filosofía tampoco tienen numeración. Los enlaces de las
+tarjetas dicen «Ver servicios», mantienen texto y flecha unidos e identifican
+el área mediante su nombre accesible. La portada usa notas de alcance breves;
+el catálogo conserva las delimitaciones completas, centralizadas en services.ts.
 `/contacto` presenta las modalidades de atención y el CTA de WhatsApp en dos
 columnas desde el breakpoint de escritorio y una columna en pantallas menores.
 El encabezado muestra el logotipo navy y el pie su variante blanca suministrada.
@@ -111,3 +115,108 @@ de `braces` (GHSA-vfj7-8cjw-p6xm). El aviso no ofrece una versión corregida.
 La sugerencia automática de npm implica retroceder `eslint-config-next` a otra
 versión mayor; se conserva la configuración alineada con Next.js 16.
 Revise actualizaciones compatibles antes de publicar.
+# Indicadores económicos
+
+IPSA está oculto temporalmente en la franja, incluso durante la carga, hasta
+disponer de la API autorizada de la Bolsa de Santiago. Su configuración sigue
+preparada. Se muestran cinco indicadores: cinco columnas en escritorio amplio,
+tres en tablet y dos en teléfonos.
+
+Fechas públicas: «Valor del 10 oct 2026» para UF y «Último dato: 9 oct
+2026» para las demás observaciones (ejemplos de formato, no cotizaciones
+fijas). IPSA y Brent sin credencial muestran «Próximamente»; un proveedor
+configurado que no entrega un dato válido muestra «Dato temporalmente no
+disponible», sin detalles internos de integración.
+
+## Brent: fuente elegida y activación
+
+Se utiliza directamente la API v2 de EIA: `petroleum/pri/spt/data/`, serie
+`RBRTE` (Europe Brent Spot Price FOB), frecuencia diaria, dólares por barril.
+Se solicitan observaciones descendentes sin transformaciones, se descartan
+valores no numéricos y se conserva el último día de observación válido, nunca
+la fecha de consulta. No son futuros Brent. El parser valida serie y unidad.
+
+FRED `DCOILBRENTEU` identifica el mismo tipo de precio spot de origen EIA y
+requiere una API key, pero no se integra: los
+[términos actuales de FRED](https://fred.stlouisfed.org/legal/), apartado
+«Prohibitions for FRED API», inciso (l), prohíben almacenar o cachear contenido
+obtenido por esa API. Esto entra en conflicto con la caché de 60 minutos
+solicitada. No se usa un endpoint CSV no documentado para eludir esa condición.
+No hace falta `FRED_API_KEY` con la fuente finalmente elegida.
+
+Para activar Brent, obtener una clave en
+[registro oficial EIA](https://www.eia.gov/opendata/register.php), añadir
+`EIA_API_KEY=su_clave` a `.env.local` y reiniciar Next.js. La clave está configurada y la respuesta autenticada se verificó el 10 oct 2026:
+RBRTE, unidad `$/BBL`, observación del 6 oct 2026. Brent admite un reintento
+ante fallos de conexión, con seis segundos de límite por intento.
+[Las condiciones de reutilización EIA](https://www.eia.gov/about/copyrights_reuse.php)
+permiten usar y distribuir los datos con atribución; la sección enlaza EIA y
+conserva la fecha del dato. No se utiliza su logotipo ni se implica respaldo
+institucional.
+
+La validación del 10 oct 2026 confirmó que el cobre `F019.PPB.PRE.100.D`
+está definido por BDE como precio del cobre refinado BML en dólares/libra,
+sin aplicar conversiones (solo redondeo visual a dos decimales). TPM se
+contrastó con el [comunicado de la RPM de septiembre de 2026](https://www.bcentral.cl/contenido/-/detalle/prensa/comunicados-rpm/comunicado-rpm-septiembre-2026): 4,5 %, con la siguiente reunión prevista para el 26 y 27 de octubre.
+
+La portada incluye seis indicadores inmediatamente después del hero. La fecha
+actual se calcula por solicitud en `America/Santiago`; las respuestas de los
+proveedores se revalidan cada 3.600 segundos. La UF exige una observación de ese
+día. Los demás indicadores toman la última observación numérica publicada hasta
+ese día, omitiendo `ND` y fechas futuras. Nunca se usa la fecha de consulta como
+fecha del dato. Las consultas tienen un límite de seis segundos; un error afecta
+solo al indicador correspondiente y muestra «No disponible».
+
+Copiar `.env.example` a `.env.local` y configurar las claves únicamente en el
+servidor. `.env.local` está excluido de Git. Next.js expande los signos `$`:
+escapar cada signo del token BDE como `\$`. Reiniciar el servidor después de
+cambiar variables. No usar variables `NEXT_PUBLIC_` para estas credenciales.
+
+| Indicador | Fuente / serie | Configuración |
+| --- | --- | --- |
+| UF | BDE `F073.UFF.PRE.Z.D` | `BCCH_API_TOKEN` |
+| TPM | BDE `F022.TPM.TIN.D001.NO.Z.D` | `BCCH_API_TOKEN` |
+| Dólar observado | BDE `F073.TCO.PRE.Z.D` | `BCCH_API_TOKEN` |
+| Cobre refinado BML | BDE `F019.PPB.PRE.100.D`, USD/libra, diaria | `BCCH_API_TOKEN` |
+| IPSA | Pendiente de fuente autorizada de último cierre | Endpoint documentado, contrato de respuesta y permiso de publicación pública pendientes |
+| Brent spot Europa FOB | EIA v2 `petroleum/pri/spt`, serie `RBRTE`, diaria, USD/barril | `EIA_API_KEY` |
+
+Las cuatro series BDE se comprobaron con respuestas reales de `GetSeries`.
+Pruebas en Edge a 320, 375, 393, 440, 768 y 1280 px: seis indicadores,
+cinco observaciones reales con fecha, IPSA pendiente y sin desbordamiento
+horizontal. Se comprobó que el HTML no contiene el token ni URLs de consulta
+autenticadas. Pruebas de lógica: seis aprobadas. Lint, TypeScript y build
+aprobados. Estas pruebas de viewport no equivalen a pruebas en iPhone físico.
+El catálogo oficial `SearchSeries` (frecuencia `DAILY`) confirma para el cobre
+la descripción «BML Refined Copper Price (dollars/pound) | Daily»; no se utiliza
+una serie mensual ni una cotización por tonelada. El valor se presenta con dos
+decimales y conserva su fecha original.
+
+Documentación y condiciones:
+
+- [API BDE](https://si3.bcentral.cl/estadisticas/Principal1/Web_Services/documentacion.html), [activar acceso](https://si3.bcentral.cl/estadisticas/Principal1/Web_Services/acceso_api.html), [términos](https://si3.bcentral.cl/estadisticas/Principal1/Web_Services/terminos_condiciones.html): permiten publicar con atribución al Banco; máximo cinco consultas simultáneas por segundo por cuenta. Esta sección solicita cuatro series BDE. El cobre BML es información de terceros publicada en BDE; los términos requieren verificar con la fuente original antes de emplearla en actos o contratos. La franja es informativa y atribuye al Banco Central.
+- [API EIA](https://www.eia.gov/opendata/documentation.php), [obtener clave](https://www.eia.gov/opendata/register.php), [reutilización](https://www.eia.gov/about/copyrights_reuse.php): permite reutilizar datos con atribución. El adaptador se validó con una clave real configurada en `EIA_API_KEY`. No se usa una clave de demostración.
+- [Bolsa de Santiago / datos](https://www.bolsadesantiago.com/productos): no se verificó un endpoint público documentado de cierre IPSA con autorización de redistribución. Antes de habilitarlo, obtener documentación y permiso público del proveedor, validar que es cierre y no precio intradía y conservar su fecha. No hay scraping ni endpoints privados ni un proveedor alternativo silencioso.
+
+`src/lib/economic-indicators.server.ts` contiene las consultas y está protegido
+con `server-only`. Los componentes reciben solo nombre, unidad, serie pública y
+observación; nunca claves ni URLs de consulta con credenciales. No se registran
+errores del proveedor porque podrían contener dichas URLs.
+Las consultas autenticadas usan HTTPS nativo, evitando que el `fetch`
+instrumentado de Next.js registre URLs en trazas o errores internos de caché.
+`unstable_cache` conserva solo observaciones procesadas y argumentos públicos
+(serie y fecha), con revalidación de una hora. El registro de Next.js está
+desactivado en `next.config.ts`. Si posteriormente se incorpora monitorización
+APM o un proxy de salida, deberá excluir o redactar los parámetros `token` y
+`api_key` antes de almacenar URLs; esa infraestructura externa no está
+configurada en este proyecto.
+
+Pruebas de selección, validación y formato:
+
+```powershell
+node --experimental-strip-types --test tests/economic-indicators.test.mjs
+npm.cmd run lint
+npm.cmd run typecheck
+npm.cmd run build
+```
+

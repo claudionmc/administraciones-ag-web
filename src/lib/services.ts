@@ -7,6 +7,7 @@ export interface ServiceArea {
   readonly description: string;
   readonly summary: string;
   readonly scopeNote?: string;
+  readonly homeScopeNote?: string;
   readonly services: readonly Service[];
 }
 
@@ -45,6 +46,7 @@ export const SERVICE_AREAS = [
     "description": "Análisis para su propia comprensión y planificación financiera personal; sin certificaciones de capacidad de pago ni evaluaciones crediticias para terceros.",
     "summary": "Ordene sus finanzas personales y dé estructura a sus objetivos.",
     "scopeNote": "Planificación para su propio uso; sin certificaciones de capacidad de pago ni evaluaciones crediticias para terceros.",
+    "homeScopeNote": "Planificación para su propio uso.",
     "services": [
       {
         "id": "financiera-1",
@@ -74,6 +76,7 @@ export const SERVICE_AREAS = [
     "description": "Análisis objetivo y descriptivo del patrimonio y de carteras existentes, sin recomendaciones personalizadas de inversión.",
     "summary": "Comprenda la composición y evolución de su patrimonio.",
     "scopeNote": "Análisis descriptivo; sin recomendaciones personalizadas de inversión ni gestión discrecional de cartera.",
+    "homeScopeNote": "Análisis descriptivo, sin recomendaciones de inversión.",
     "services": [
       {
         "id": "patrimonial-1",
