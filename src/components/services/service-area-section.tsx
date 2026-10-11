@@ -1,5 +1,4 @@
 import { Container } from "@/components/ui/container";
-import { ButtonLink } from "@/components/ui/button";
 import type { ServiceArea } from "@/lib/services";
 
 export function ServiceAreaSection({ area, index }: { area: ServiceArea; index: number }) {
@@ -10,7 +9,6 @@ export function ServiceAreaSection({ area, index }: { area: ServiceArea; index: 
           <h2 id={`${area.id}-title`} className="text-3xl font-medium leading-tight tracking-tight text-primary sm:text-4xl">{area.title}</h2>
           <p className="mt-6 leading-8 text-text-muted">{area.summary}</p>
           {area.scopeNote && <p className="mt-6 border-l-2 border-primary-action pl-4 text-sm leading-7 text-text-muted">{area.scopeNote}</p>}
-          <div className="mt-8"><ButtonLink href="/contacto">Solicitar asesoría <span aria-hidden="true">↗</span></ButtonLink></div>
         </div>
         <div className="grid content-start gap-x-8 sm:grid-cols-2">
           {area.services.map((service) => (

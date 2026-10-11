@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Container } from "@/components/ui/container";
-import { ButtonLink } from "@/components/ui/button";
-import { COMPANY, WHATSAPP_URL } from "@/lib/constants";
+import { COMPANY } from "@/lib/constants";
 import { HeroPhoto } from "@/components/home/hero-photo";
 export function Hero() {
   return <section aria-labelledby="hero-title" className="bg-primary text-white"><Container className="pb-8 pt-10 md:pb-10 md:pt-20 lg:pb-8 lg:pt-24">
@@ -13,7 +12,7 @@ export function Hero() {
         <p className="text-lg font-medium leading-7 text-white">{COMPANY.motto}</p>
         <p className="mt-2 text-sm leading-6 text-on-dark">Rigurosidad técnica. Atención personalizada. Visión de largo plazo</p>
       </div>
-      <div className="mt-6 flex flex-wrap items-center gap-4 md:mt-9 md:gap-6"><ButtonLink href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" aria-label="Solicitar asesoría por WhatsApp (abre una nueva pestaña)" variant="light">Solicitar asesoría <span aria-hidden="true">↗</span></ButtonLink><Link href="/servicios" className="inline-flex min-h-11 items-center text-sm text-on-dark underline decoration-accent/50 underline-offset-8 hover:text-white">Explorar nuestros servicios</Link></div>
+      <div className="mt-6 flex flex-wrap items-center gap-4 md:mt-9 md:gap-6"><Link href="/servicios" className="inline-flex min-h-11 items-center text-sm text-on-dark underline decoration-accent/50 underline-offset-8 hover:text-white">Explorar nuestros servicios</Link></div>
     </div><div className="min-w-0">
       <HeroPhoto />
     </div></div>

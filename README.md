@@ -117,6 +117,12 @@ versión mayor; se conserva la configuración alineada con Next.js 16.
 Revise actualizaciones compatibles antes de publicar.
 # Indicadores económicos
 
+Los CTA «Solicitar asesoría» se conservan en el encabezado (escritorio y menú
+móvil) y en el recuadro WhatsApp de Contacto. Inicio mantiene «Explorar nuestros
+servicios» en el hero y un enlace discreto «Contacto» en su sección final;
+las categorías de Servicios no repiten el CTA. Navegación y enlaces comprobados
+en las tres páginas a 393, 440 y 1280 px, sin desbordamientos horizontales.
+
 IPSA está oculto temporalmente en la franja, incluso durante la carga, hasta
 disponer de la API autorizada de la Bolsa de Santiago. Su configuración sigue
 preparada. Se muestran cinco indicadores: cinco columnas en escritorio amplio,
