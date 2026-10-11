@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { WHATSAPP_URL } from "@/lib/constants";
 import { SiteNavigation } from "@/components/site-navigation";
 import { ButtonLink } from "@/components/ui/button";
 
@@ -48,7 +49,7 @@ export function HeaderMenu() {
         className={`${open ? "flex" : "hidden"} col-span-2 min-w-0 flex-col items-start gap-5 border-t border-border pt-5 lg:flex lg:flex-row lg:items-center lg:gap-8 lg:border-0 lg:pt-0`}
       >
         <SiteNavigation layout="header" onNavigate={close} />
-        <ButtonLink href="/contacto" onClick={close}>Solicitar asesoría <span aria-hidden="true">↗</span></ButtonLink>
+        <ButtonLink href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" aria-label="Solicitar asesoría por WhatsApp (abre una nueva pestaña)" onClick={close}>Solicitar asesoría <span aria-hidden="true">↗</span></ButtonLink>
       </div>
     </div>
   );
