@@ -99,7 +99,15 @@ menú desplegable, cierre con Escape y foco, navegación y enlace de WhatsApp.
 Se inspeccionaron capturas de 440 px y 1440 px. Esta emulación no sustituye
 la prueba de Safari en un iPhone físico.
 
-No hay formulario, envío de datos, backend ni datos de contacto inventados.
+`/acceso-clientes` está disponible en el menú y en el pie. Incluye usuario y
+contraseña, pero todos los intentos con ambos campos completos muestran
+«Error: usuario no registrado». Es una interfaz local sin autenticación real:
+no envía ni guarda credenciales, limpia los campos al intentar ingresar y no
+crea sesiones ni permite acceder a contenido privado. Sin JavaScript, los
+campos y el botón permanecen deshabilitados. La página avisa que el acceso
+aún no está habilitado y se excluye de la indexación de buscadores.
+
+No hay envío de datos del formulario, backend ni datos de contacto inventados.
 El botón de WhatsApp en `/contacto` abre el número y mensaje configurados en
 `src/lib/constants.ts`: «Solicitar asesoría» es el texto visible y «Solicitar una
 asesoría» es el mensaje prellenado. El usuario decide enviarlo en WhatsApp.

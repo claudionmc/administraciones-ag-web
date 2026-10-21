@@ -17,5 +17,6 @@ export const NAVIGATION = [
   { href: "/", label: "Inicio" },
   { href: "/servicios", label: "Servicios" },
   { href: "/contacto", label: "Contacto" },
+  { href: "/acceso-clientes", label: "Acceso clientes" },
 ] as const;
 
