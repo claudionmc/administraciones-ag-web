@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { ClientAccessForm } from "@/components/client-access-form";
 import { Container } from "@/components/ui/container";
+import { clientAccessEnabled } from "@/lib/supabase/server";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Acceso clientes",
@@ -9,6 +12,7 @@ export const metadata: Metadata = {
 };
 
 export default function ClientAccessPage() {
+  const enabled = clientAccessEnabled();
   return (
     <section aria-labelledby="client-access-title" className="section-space bg-surface-muted">
       <Container>
@@ -18,11 +22,12 @@ export default function ClientAccessPage() {
             Acceso clientes
           </h1>
           <p id="client-access-notice" className="mt-6 leading-7 text-text-muted">
-            El acceso aún no está habilitado. Este formulario no envía ni guarda
-            los datos ingresados y no permite iniciar sesión.
+            {enabled
+              ? "Ingrese con su email y contraseña. El acceso está reservado a clientes habilitados."
+              : "El acceso aún no está habilitado. Este formulario no envía ni guarda los datos ingresados y no permite iniciar sesión."}
           </p>
           <div className="mt-8 border border-border bg-surface p-6 sm:p-8">
-            <ClientAccessForm />
+            <ClientAccessForm enabled={enabled} />
           </div>
         </div>
       </Container>

@@ -1,7 +1,7 @@
 # Administraciones AG SpA
 
 Base del sitio corporativo en Next.js con App Router, TypeScript estricto,
-Tailwind CSS y ESLint. Desarrollo local; sin publicación ni integración de datos.
+Tailwind CSS y ESLint. Incluye integración local de Supabase, deshabilitada por defecto.
 
 ## Requisitos y ejecución
 
@@ -99,15 +99,12 @@ menú desplegable, cierre con Escape y foco, navegación y enlace de WhatsApp.
 Se inspeccionaron capturas de 440 px y 1440 px. Esta emulación no sustituye
 la prueba de Safari en un iPhone físico.
 
-`/acceso-clientes` está disponible en el menú y en el pie. Incluye usuario y
-contraseña, pero todos los intentos con ambos campos completos muestran
-«Error: usuario no registrado». Es una interfaz local sin autenticación real:
-no envía ni guarda credenciales, limpia los campos al intentar ingresar y no
-crea sesiones ni permite acceder a contenido privado. Sin JavaScript, los
-campos y el botón permanecen deshabilitados. La página avisa que el acceso
-aún no está habilitado y se excluye de la indexación de buscadores.
+`/acceso-clientes` está disponible en el menú y en el pie. Por defecto permanece
+en modo demostración: email y contraseña no se envían y el intento muestra
+«Error: usuario no registrado». Sin JavaScript, los campos permanecen deshabilitados.
+La integración real y sus pasos de habilitación se documentan más abajo.
 
-No hay envío de datos del formulario, backend ni datos de contacto inventados.
+En modo demostración no hay envío de datos del formulario ni datos de contacto inventados.
 El botón de WhatsApp en `/contacto` abre el número y mensaje configurados en
 `src/lib/constants.ts`: «Solicitar asesoría» es el texto visible y «Solicitar una
 asesoría» es el mensaje prellenado. El usuario decide enviarlo en WhatsApp.
@@ -234,3 +231,66 @@ npm.cmd run typecheck
 npm.cmd run build
 ```
 
+
+## Acceso de clientes: Supabase y PostgreSQL
+
+La integración usa los paquetes oficiales `@supabase/supabase-js` y
+`@supabase/ssr`. Supabase Auth administra email y hash de contraseña; no hay
+contraseñas en tablas públicas ni SQL construido con texto de los visitantes.
+`public.clientes` contiene únicamente `id` (UUID de Auth), `activo` y `created_at`.
+El email permanece en Auth para no duplicarlo. No hay registro público en la web.
+
+1. En Supabase, Authentication / configuración de Sign In, desactivar
+   **Allow new users to sign up** y mantener el acceso anónimo desactivado.
+   Ocultar un formulario de registro no deshabilita el endpoint de registro.
+2. En SQL Editor, ejecutar una sola vez
+   `supabase/migrations/202610210001_clientes.sql`.
+3. Ejecutar `supabase/tests/clientes-rls.sql` en SQL Editor como `postgres`.
+   Comprueba aislamiento entre dos cuentas ficticias, cuenta inactiva, denegación
+   de escritura y acceso anónimo. Todo termina con ROLLBACK; si falla, ejecutar
+   ROLLBACK antes de continuar. No usar usuarios reales para estas pruebas.
+4. Crear una cuenta ficticia en Authentication / Users / Add user / Create user.
+   Para este ensayo usar email confirmado y contraseña temporal fuerte, guardada
+   fuera de Git. No se implementa todavía el canje de invitaciones por email
+   ni recuperación de contraseña; no enviar invitaciones hasta desarrollar ese flujo.
+5. Copiar el UUID de esa cuenta y habilitarla en SQL Editor:
+
+   ```sql
+   insert into public.clientes (id, activo)
+   values ('UUID_DE_LA_CUENTA_FICTICIA', true);
+   ```
+
+6. Configurar `.env.local` con `NEXT_PUBLIC_SUPABASE_URL` y
+   `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. No se requiere `service_role` ni
+   contraseña de PostgreSQL. Reiniciar Next.js al cambiar variables.
+7. Solo para pruebas ficticias, añadir `CLIENT_ACCESS_ENABLED=true` y reiniciar.
+   Por defecto, si falta esa bandera o la configuración, no se autentica a nadie.
+8. Comprobar entrada válida, contraseña errónea, cuenta no habilitada, salida,
+   acceso directo a `/clientes` sin sesión y dos navegadores con cuentas distintas.
+   Después de salir, el acceso directo al área privada debe volver al login.
+
+La sesión se almacena en cookies HttpOnly, SameSite=Lax y Secure en producción.
+El Proxy renueva la sesión; el área privada verifica de nuevo al usuario en el
+servidor mediante `getUser()` y consulta su fila activa bajo RLS. Una cookie
+inventada no otorga acceso. Las respuestas privadas no se cachean. Los clientes
+solo tienen SELECT de su propia fila activa: no pueden darse de alta ni habilitarse.
+Para revocar acceso, establecer `activo=false` desde el dashboard. No se utiliza
+la clave administrativa en la aplicación.
+
+El formulario real usa Server Actions (POST y comprobación de origen de Next.js),
+validación de email y límites de longitud. Los errores no confirman si existe
+un email. Supabase aplica sus límites de autenticación; se presenta un mensaje
+específico ante HTTP 429. No hay un limitador propio distribuido por usuario/IP.
+Antes del lanzamiento revisar Auth Rate Limits y configurar protección adicional
+contra intentos automatizados según el uso; no confiar en contadores en memoria
+para funciones de Vercel.
+
+**Pendiente antes de usar datos reales:** aprobar y publicar aviso de privacidad,
+configurar respaldos y retención, completar recuperación de contraseña y alta por
+invitación, verificar controles antiabuso y ejecutar las pruebas de autorización
+con el proyecto remoto. No desplegar ni activar el acceso público sin aprobación.
+No almacenar datos reales en fixtures, Git ni archivos locales de base de datos.
+
+Referencias oficiales:
+- https://supabase.com/docs/guides/auth/server-side/creating-a-client
+- https://supabase.com/docs/guides/database/postgres/row-level-security

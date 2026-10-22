@@ -1,57 +1,52 @@
-"use client";
+﻿"use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useActionState, useEffect, useRef, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
+import { signIn } from "@/app/acceso-clientes/actions";
 
-export function ClientAccessForm() {
+export function ClientAccessForm({ enabled = false }: { enabled?: boolean }) {
   const fieldsetRef = useRef<HTMLFieldSetElement>(null);
-  const [hasError, setHasError] = useState(false);
+  const [demoError, setDemoError] = useState(false);
+  const [state, action, pending] = useActionState(signIn, { error: "" });
 
   useEffect(() => {
     if (fieldsetRef.current) fieldsetRef.current.disabled = false;
   }, []);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleDemo(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     event.currentTarget.reset();
-    setHasError(true);
+    setDemoError(true);
   }
 
   return (
-    <form onSubmit={handleSubmit} aria-describedby="client-access-notice" autoComplete="off">
-      {/* No names: credentials must never be serialized as form data. */}
+    <form action={enabled ? action : undefined} onSubmit={enabled ? undefined : handleDemo}
+      aria-describedby="client-access-notice" autoComplete={enabled ? "on" : "off"}>
       <fieldset ref={fieldsetRef} disabled className="space-y-6">
         <legend className="sr-only">Credenciales de acceso</legend>
         <div>
-          <label htmlFor="client-username" className="block text-sm font-medium text-primary">Usuario</label>
-          <input
-            id="client-username"
-            type="text"
-            required
-            autoCapitalize="none"
-            spellCheck={false}
-            autoComplete="off"
-            onChange={() => setHasError(false)}
-            className="mt-2 min-h-12 w-full rounded-sm border border-border bg-surface px-4 py-3 text-primary"
-          />
+          <label htmlFor="client-email" className="block text-sm font-medium text-primary">Email</label>
+          <input id="client-email" name={enabled ? "email" : undefined} type="email" required
+            maxLength={254} autoCapitalize="none" spellCheck={false}
+            autoComplete={enabled ? "username" : "off"}
+            onChange={() => setDemoError(false)}
+            className="mt-2 min-h-12 w-full rounded-sm border border-border bg-surface px-4 py-3 text-primary" />
         </div>
         <div>
           <label htmlFor="client-password" className="block text-sm font-medium text-primary">Contraseña</label>
-          <input
-            id="client-password"
-            type="password"
-            required
-            autoComplete="off"
-            onChange={() => setHasError(false)}
-            className="mt-2 min-h-12 w-full rounded-sm border border-border bg-surface px-4 py-3 text-primary"
-          />
+          <input id="client-password" name={enabled ? "password" : undefined} type="password" required
+            maxLength={1024} autoComplete={enabled ? "current-password" : "off"}
+            onChange={() => setDemoError(false)}
+            className="mt-2 min-h-12 w-full rounded-sm border border-border bg-surface px-4 py-3 text-primary" />
         </div>
         <div role="alert" aria-atomic="true">
-          {hasError && <p className="border-l-2 border-primary-action bg-surface-muted p-4 text-sm font-medium text-primary">Error: usuario no registrado</p>}
+          {(demoError || state.error) && <p className="border-l-2 border-primary-action bg-surface-muted p-4 text-sm font-medium text-primary">
+            {enabled ? state.error : "Error: usuario no registrado"}
+          </p>}
         </div>
-        <Button type="submit" className="w-full">Ingresar</Button>
+        <Button type="submit" disabled={pending} className="w-full">{pending ? "Ingresando…" : "Ingresar"}</Button>
       </fieldset>
-      <noscript><p className="mt-4 text-sm text-text-muted">Active JavaScript para utilizar este formulario de demostración.</p></noscript>
+      <noscript><p className="mt-4 text-sm text-text-muted">Active JavaScript para utilizar este formulario.</p></noscript>
     </form>
   );
 }
