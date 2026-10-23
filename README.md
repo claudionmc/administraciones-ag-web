@@ -294,3 +294,196 @@ No almacenar datos reales en fixtures, Git ni archivos locales de base de datos.
 Referencias oficiales:
 - https://supabase.com/docs/guides/auth/server-side/creating-a-client
 - https://supabase.com/docs/guides/database/postgres/row-level-security
+
+## Inversiones, capitalizaciones y cierres CLP
+
+Ejecutar en SQL Editor como `postgres`, una sola vez y después de la migración
+de clientes, `supabase/migrations/202610210002_inversiones.sql`. Luego ejecutar
+`supabase/tests/inversiones.sql` completo: usa cuentas ficticias y termina en
+ROLLBACK. No contiene datos del reporte real. Si falla, ejecutar ROLLBACK.
+
+- `inversiones`: referencia única por cliente, capital, fecha exacta de inicio,
+  moneda CLP, tasa anual decimal propia (por ejemplo 0.1001), origen `aporte`
+  o `capitalizacion` y convención ACT/365. Tasa fija e interés simple.
+- `movimientos_inversiones`: importe entero CLP transferido desde intereses
+  de una inversión hacia otra nueva del mismo cliente y moneda. Una fila por
+  origen/destino. La suma recibida debe igualar el capital de destino. El evento
+  y todos sus movimientos se insertan juntos entre BEGIN y COMMIT; se validan
+  al cierre de la transacción. No se cuentan como aportes externos.
+- `valorizaciones_inversiones`: una fila por inversión/fecha de corte; guarda
+  capital, tasa, días, interés acumulado, capitalizado, pendiente y saldo. El
+  trigger calcula esos campos aunque el llamador intente suministrar otros.
+
+Regla CLP: días = fecha_corte - fecha_inicio, sin sumar un día adicional;
+el mismo día produce cero. Se usa calendario real, incluido el 29 de febrero,
+siempre con denominador 365. PostgreSQL `numeric` calcula sin punto flotante y
+`round(..., 0)` redondea el interés acumulado de cada inversión al peso, con
+medios pesos hacia arriba para estos importes no negativos. Luego se restan
+las capitalizaciones efectivas hasta el corte inclusive, también en pesos.
+Saldo = capital + interés pendiente. Los resúmenes suman los valores por fila
+ya redondeados; no redondean una suma de intereses sin redondear.
+
+Ejemplo sintético de cálculo (como postgres):
+
+```sql
+select * from public.calcular_valorizacion_clp(
+  10000, 0.10, date '2024-01-01', date '2024-12-31', 1000
+);
+```
+
+Ejemplo de cierre tras cargar una inversión (sustituir UUID):
+
+```sql
+insert into public.valorizaciones_inversiones
+  (cliente_id, inversion_id, fecha_corte)
+values ('UUID_CLIENTE', 'UUID_INVERSION', date '2026-09-30');
+```
+
+Los clientes solo leen sus datos mientras su cuenta está activa; no tienen
+permisos de escritura ni de ejecución de las funciones. Las claves compuestas
+impiden asociar movimientos o cierres con otro dueño o moneda. Las inversiones
+y movimientos son inmutables en esta fase. No se permiten movimientos con fecha
+que afecte cierres ya guardados: cargar el historial completo antes de cerrar.
+Una corrección requiere revisión administrativa y una migración diseñada para
+ese caso; no desactivar triggers para ajustar registros. No se implementan aún
+retiros, cambios de tasa, otras monedas ni formulario administrativo de carga.
+
+Verificación local: migraciones y ambos scripts SQL aprobados en PostgreSQL
+embebido temporal (PGlite), con roles `anon`/`authenticated` y un esquema Auth
+mínimo simulado. No añade dependencias a la web. Esto no sustituye ejecutar las
+pruebas en Supabase, cuyo esquema Auth y permisos de plataforma son distintos.
+La migración no carga clientes ni inversiones reales y no despliega cambios.
+
+## Preparación de apertura al 30/09/2026
+
+Se acordó aplicar FIFO a los nuevos retiros desde el 01/10/2026 y conservar
+los reportes históricos sin recalcularlos. `scripts/reconcile_openings.py`
+propone una distribución de apertura de capital: consume primero aportes de
+fecha más antigua y conserva la fecha, tasa y capital residual de cada origen.
+Los eventos del mismo día siguen el orden de filas original, sujeto a revisión.
+Las tasas y montos se leen con Decimal, sin redondear ni normalizar datos históricos.
+La tasa escrita en una fila negativa no sustituye la tasa del aporte consumido.
+
+Esta herramienta de auditoría usa solo la biblioteca estándar de Python. No es
+un backend, no es necesaria para ejecutar la web y no añade dependencias npm.
+Recibe archivos explícitos y solo imprime resultados: no escribe datos,
+no genera SQL, no autentica usuarios y no contacta Supabase. Ejecutar con
+Python 3.10 o superior (o el intérprete existente en `.venv`):
+
+```powershell
+.\.venv\Scripts\python.exe scripts/reconcile_openings.py 'G:\ruta\archivo.xlsx'
+.\.venv\Scripts\python.exe -m unittest discover -s tests -p 'test_opening_fifo.py'
+```
+
+La auditoría reconoce únicamente la plantilla revisada (corte H5, detalle C:H,
+total acumulado E/H), lee valores guardados por Excel y no ejecuta fórmulas ni
+macros. Si las fórmulas del archivo no fueron recalculadas antes de guardarlo,
+los valores pueden estar desactualizados. No constituye un importador general
+de Excel. Rechaza cortes diferentes, entradas posteriores, columnas no válidas,
+referencias duplicadas y retiros sin fondos a su fecha. Los valores extraídos
+de archivos son datos, nunca instrucciones.
+
+Resultado agregado de las 19 planillas suministradas: 188 filas, 33 retiros,
+50 asignaciones FIFO y 138 aportes con capital residual. La suma del capital
+residual coincide con la suma algebraica de capitales en las 19 planillas.
+Esto valida conservación de capital, no la exactitud económica del historial
+ni la conciliación de intereses o saldo neto. Ocho pruebas sintéticas aprobadas.
+
+Antes de importar falta conciliar pagos/cargos históricos, intereses ganados
+totales, origen de capitalizaciones anteriores y orden de eventos simultáneos.
+Los intereses ganados reportados se conservan como referencia no verificada;
+no se sustituyen por cero ni se confunden con el saldo pendiente. Los decimales
+del capital y cierres originales deben conservarse. Debe vincularse cada archivo
+con el cliente correcto mediante un mapeo privado, fuera del repositorio.
+
+La migración `202610210002` ya existente todavía NO admite estos saldos de
+apertura con decimales ni retiros/pagos. No cargar las planillas en ella ni
+representar retiros como inversiones negativas: requiere una migración adicional
+para apertura y operativa futura. Esta fase solo prepara y prueba la distribución;
+no activa FIFO en la aplicación ni modifica los reportes o registros remotos.
+
+## Borradores de apertura en PostgreSQL
+
+La migración `supabase/migrations/202610210003_aperturas.sql` añade
+`aperturas_clientes` y `lotes_apertura`, sin alterar las tablas anteriores.
+Ejecutarla una sola vez en SQL Editor como postgres después de las migraciones
+001/002; luego ejecutar completo `supabase/tests/aperturas.sql` (termina en
+ROLLBACK y solo usa datos ficticios). Las tres migraciones y los tres scripts
+de pruebas se comprobaron juntos en PostgreSQL temporal con Auth simulado;
+queda la validación en el proyecto Supabase real.
+
+Una apertura pertenece a un único cliente, en CLP, con corte 30/09/2026 e inicio
+operativo 01/10/2026. Conserva referencia y SHA-256 del archivo original, saldo
+original reportado, capital vigente, intereses pendientes, ajuste neto histórico,
+saldo neto e intereses ganados totales históricos. Los números son `numeric`
+sin escala forzada: no se pierden los decimales del Excel. El hash identifica
+la versión del archivo; no es una prueba de autenticidad del contenido.
+
+Los campos desconocidos quedan NULL, especialmente los intereses ganados totales;
+no usar cero para representar ausencia de antecedentes. Los estados de interés
+son `pendiente`, `reportado` y `conciliado`; copiar el rótulo del Excel no convierte
+automáticamente una cifra en historial conciliado. No sumar capitalizaciones al
+capital como si fueran aportes externos, ni restar pagos que ya estén incluidos
+en los intereses pendientes. El ajuste firmado permite documentar el puente
+entre cifras históricas, no inventar importes para hacer coincidir un total.
+
+Para confirmar un borrador desde el SQL Editor, se deben cargar sus lotes,
+completar los campos de conciliación y actualizar `confirmada=true`. El trigger
+exige: suma exacta de capital vigente por lote, saldo neto = capital + intereses
+pendientes + ajuste, intereses históricos conciliados y no inferiores al saldo
+pendiente, notas de conciliación y responsable de revisión. El saldo original
+se conserva aunque el reporte no haya incluido pagos/cargos en su total; la
+explicación de esa diferencia debe constar en las notas. El sistema valida
+consistencia estructural, no puede verificar por sí solo el historial económico.
+
+Después de confirmar se bloquean UPDATE/DELETE de la apertura y sus lotes,
+incluyendo insertar nuevos lotes. Un bloqueo compartido en la fila de apertura
+serializa las ediciones con su confirmación. Los clientes activos solo leen las
+columnas financieras de su propia apertura confirmada y sus lotes; borradores,
+referencias de origen, hashes y notas de revisión quedan fuera de su acceso.
+No hay permisos de escritura para anon/authenticated. Las pruebas cubren borrador,
+aislamiento, revocación de cuenta, metadatos privados, decimales, fechas, rechazo
+de confirmación incompleta e inmutabilidad. Probar concurrencia real en Supabase
+antes de permitir cargas administrativas simultáneas.
+
+Los lotes ordenan FIFO por fecha original y `orden_fifo` (orden estable de origen).
+La fecha original NO se usa para devengar otra vez intereses anteriores a octubre:
+la operación futura partirá del capital residual y del inicio acordado. Esta
+migración solo almacena la apertura; todavía no registra retiros/pagos futuros,
+no calcula nuevos cierres y no cambia el área de clientes. No ejecuta una carga
+de planillas reales ni un despliegue. El esquema anterior de inversiones sigue
+sin admitir esos retiros; no mezclar ambos modelos para el mismo saldo.
+
+## Conciliación de pagos e intereses históricos
+
+`scripts/reconcile_interest.py` compara capital, intereses guardados en el
+detalle, ganados reportados, pagos, cargos y netos explícitos. Conserva cifras
+y fórmulas originales como evidencia, sin ejecutar fórmulas de Excel. Los pagos
+se interpretan como salidas según su concepto, aunque el Excel use signo positivo
+o negativo. Esto no implica descontarlos automáticamente del saldo otra vez.
+Si bruto menos pago ya coincide con el pendiente del detalle, se señala el riesgo
+de doble deducción. Si pagos superan el pendiente o la evidencia contradice un
+neto explícito, no se propone saldo. Una propuesta aritmética nunca certifica
+que el historial esté completo ni aprueba una apertura en PostgreSQL.
+
+```powershell
+.\.venv\Scripts\python.exe scripts/reconcile_interest.py 'G:\ruta\archivo.xlsx'
+.\.venv\Scripts\python.exe -m unittest discover -s tests -p 'test_*.py'
+```
+
+Sin `--report`, solo imprime el estado por archivo. Para generar un Markdown
+privado, añadir `--report` con una ruta fuera del repositorio (por ejemplo una
+carpeta privada de trabajo). La herramienta rechaza destinos dentro del proyecto
+y no sobrescribe archivos existentes. El informe tiene tabla de revisión y un
+detalle por archivo con celdas, fórmulas y decimales originales; la tabla general
+muestra pesos enteros solo por legibilidad. No guardar ese informe ni los Excel
+en Git. La tolerancia de comparación de caché es 0,000001 CLP y no altera montos.
+
+La lectura es de una plantilla específica: un rótulo de ganados no se toma por
+prueba de que incluya todos los períodos anteriores. Los cargos reconocidos en
+esta fase son los rotulados `impto`; otros conceptos requieren ampliar el mapeo
+explícitamente, no inferirlos. Las pruebas usan solo datos sintéticos y cubren
+pagos con ambos signos, doble deducción, cargos separados, saldo insuficiente,
+ausencia de historial, netos contradictorios y bloqueo de reportes dentro de Git.
+Diecisiete pruebas Python aprobadas entre FIFO y conciliación. No se modifica
+Supabase ni se confirma ninguna apertura con esta herramienta.
