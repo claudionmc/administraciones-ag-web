@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 import { signOut } from "@/app/acceso-clientes/actions";
+import { hasInterestPayments, netOfTaxAndCapitalization } from "@/lib/interest-summary";
 
 type Amount = number | string | null;
 export type Opening = {
@@ -46,6 +47,18 @@ export function ClientDashboard({ profile, opening, lots, breakdown, unavailable
   unavailable: boolean; lotsUnavailable: boolean; breakdownUnavailable: boolean;
 }) {
   const name = [profile?.nombres, profile?.apellidos].filter(Boolean).join(" ");
+  const net = netOfTaxAndCapitalization(opening?.intereses_ganados_totales ?? null,
+    breakdown?.impuestos ?? null, breakdown?.intereses_capitalizados ?? null);
+  const showPayments = hasInterestPayments(breakdown?.intereses_pagados ?? null);
+  const interestRows: [string, Amount][] = [
+    ["Capitalizados", breakdown?.intereses_capitalizados ?? null],
+    ["Impuestos", breakdown?.impuestos ?? null],
+    ["Netos de impuestos y capitalización", net],
+    ...(showPayments ? [
+      ["Pagados", breakdown?.intereses_pagados ?? null],
+      ["Pendientes de pago", opening?.intereses_pendientes ?? null],
+    ] as [string, Amount][] : []),
+  ];
   return <>
     <section className="bg-primary py-12 text-white sm:py-16" aria-labelledby="dashboard-title">
       <Container>
@@ -70,7 +83,7 @@ export function ClientDashboard({ profile, opening, lots, breakdown, unavailable
         </p>}
         <dl className="mt-6 grid gap-4 md:grid-cols-3">
           <Metric label="Capital vigente" value={opening?.capital_vigente ?? null} description="Capital registrado al corte. Puede incluir intereses previamente capitalizados." />
-          <Metric label="Intereses ganados acumulados" value={opening?.intereses_ganados_totales ?? null} description="Total histórico conciliado; no equivale al interés pendiente de pago." />
+          <Metric label="Intereses ganados acumulados" value={opening?.intereses_ganados_totales ?? null} description="Total histórico de intereses ganados al corte confirmado." />
           <Metric label="Saldo neto al corte" value={opening?.saldo_neto_apertura ?? null} description="Saldo confirmado, incluidos los ajustes históricos conciliados." />
         </dl>
         <div className="mt-10 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
@@ -78,25 +91,20 @@ export function ClientDashboard({ profile, opening, lots, breakdown, unavailable
             <h2 id="interest-title" className="text-xl font-medium text-primary">Desglose de intereses</h2>
             {breakdownUnavailable && <p role="status" className="mt-4 text-sm text-text-muted">No fue posible consultar el desglose. Intente nuevamente más tarde.</p>}
             <dl className="mt-6 divide-y divide-border">
-              {[
-                ["Capitalizados", breakdown?.intereses_capitalizados ?? null],
-                ["Pagados", breakdown?.intereses_pagados ?? null],
-                ["Pendientes de pago", opening?.intereses_pendientes ?? null],
-                ["Impuestos", breakdown?.impuestos ?? null],
-                ["Cargos", breakdown?.cargos ?? null],
-                ["Intereses netos de impuestos y cargos", breakdown?.intereses_netos ?? null],
-              ].map(([label, value]) => <div key={String(label)} className="flex flex-wrap justify-between gap-3 py-4 text-sm">
+              <div className="flex flex-wrap justify-between gap-3 py-4 text-sm font-medium text-primary">
+                <dt>Total Ganados</dt><dd className="tabular-nums">{money(opening?.intereses_ganados_totales ?? null)}</dd>
+              </div>
+              {interestRows.map(([label, value]) => <div key={label} className="ml-[4ch] flex flex-wrap justify-between gap-3 py-4 text-sm">
                 <dt className="text-text-muted">{label}</dt><dd className="font-medium tabular-nums text-primary">{money(value)}</dd>
               </div>)}
             </dl>
-            <p className="mt-5 text-sm leading-relaxed text-text-muted">Los intereses capitalizados ya están incluidos en el capital vigente. Los pagados no se agregan al saldo actual. El desglose histórico pendiente no se estima a partir de diferencias entre totales.</p>
           </section>
           <aside className="border border-border bg-white p-6 sm:p-8" aria-labelledby="report-title">
             <p className="eyebrow text-primary-action">Acerca de su reporte</p>
             <h2 id="report-title" className="mt-4 text-xl font-medium text-primary">Una fecha, una visión clara</h2>
             <p className="mt-5 text-sm leading-relaxed text-text-muted">Este resumen corresponde al último corte histórico confirmado disponible. No representa un saldo actualizado a hoy ni incorpora movimientos posteriores al corte.</p>
             <p className="mt-4 text-sm leading-relaxed text-text-muted">Los campos sin antecedentes verificados indican “Información pendiente”. Un importe de cero se muestra únicamente cuando está registrado.</p>
-            <p className="mt-4 text-sm leading-relaxed text-text-muted">El capital vigente no equivale al total de aportes históricos. Los intereses netos corresponden a los ganados, descontados los impuestos y cargos registrados; incluyen intereses pagados, capitalizados y pendientes.</p>
+            <p className="mt-4 text-sm leading-relaxed text-text-muted">Los netos de impuestos y capitalización corresponden al total ganado menos ambos conceptos, antes de descontar pagos. Los capitalizados ya forman parte del capital vigente.</p>
           </aside>
         </div>
         <section className="mt-10 border border-border bg-white" aria-labelledby="detail-title">

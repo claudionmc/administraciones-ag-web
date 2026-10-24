@@ -573,3 +573,13 @@ datos sintéticos y el rechazo de una segunda ejecución. No se añadieron
 dependencias al proyecto. Ejecutar los scripts SQL en Supabase de pruebas para
 validar permisos de la plataforma y concurrencia real. La migración y la carga
 remotas siguen pendientes; no se cargaron datos personales ni se desplegó.
+
+El desglose visible muestra “Total Ganados”, seguido de Capitalizados,
+Impuestos y Netos de impuestos y capitalización con sangría de cuatro caracteres.
+Este neto de presentación es total ganado menos impuestos menos capitalizados,
+sin deducir pagos ni cargos; no sustituye `intereses_netos` del registro histórico,
+cuya definición incluye cargos. Se resta con enteros decimales sin punto flotante
+y se conserva el estado desconocido si falta un componente. Solo cuando hay
+intereses pagados mayores a cero se muestran debajo Pagados y Pendientes de pago.
+No requiere migración ni modifica saldos guardados. Verificar las reglas con
+`node --test tests/interest-summary.test.mjs`.
