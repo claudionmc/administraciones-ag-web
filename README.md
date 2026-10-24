@@ -487,3 +487,89 @@ pagos con ambos signos, doble deducción, cargos separados, saldo insuficiente,
 ausencia de historial, netos contradictorios y bloqueo de reportes dentro de Git.
 Diecisiete pruebas Python aprobadas entre FIFO y conciliación. No se modifica
 Supabase ni se confirma ninguna apertura con esta herramienta.
+
+## Dashboard privado de clientes
+
+`/clientes` presenta un resumen responsive con los tokens corporativos y
+componentes de servidor. Conserva la verificación de sesión, cuenta activa y
+RLS; usa la sesión del cliente, sin claves administrativas ni caché compartida.
+La página privada no se indexa. No se añadieron dependencias.
+
+- Identidad: nombres, apellidos y RUT, cuando estén registrados.
+- Resumen: capital vigente, intereses ganados históricos y saldo neto del corte.
+- Desglose: intereses pendientes de la apertura y capitalizados, pagados,
+  impuestos, cargos e intereses netos desde `desgloses_apertura`. Un desglose
+  ausente permanece pendiente; los ceros registrados se muestran como $0.
+- Detalle: lotes de la misma apertura confirmada, fecha original, tasa anual y
+  capital vigente. No mezcla el modelo inicial de inversiones con aperturas.
+
+Los saldos provienen exclusivamente de `aperturas_clientes` confirmadas y sus
+`lotes_apertura`, con filtros explícitos por cliente además de RLS. No se
+recalcula interés ni se incorporan movimientos posteriores al corte. El capital
+vigente puede incluir capitalizaciones y no representa aportes externos
+históricos. No se deriva un desglose por diferencias entre totales. Los montos
+se presentan en CLP, con hasta dos decimales para lectura; no se modifican los
+valores originales ni se realizan cálculos financieros con números de JavaScript.
+La ausencia de datos y los errores de consulta muestran estados distintos.
+
+Antes de completar identidad, ejecutar manualmente como postgres la migración
+`supabase/migrations/202610230001_perfil_clientes.sql`, después de las anteriores.
+Añade campos opcionales a `clientes`, sujetos a la política de lectura propia
+existente y sin conceder escritura al cliente. RUT se almacena sin puntos y con
+guion; la restricción comprueba formato, no dígito verificador. Registrar datos
+personales solo tras cumplir los requisitos de privacidad ya indicados.
+Sin esta migración, el dashboard funciona con identidad pendiente. Los errores
+de perfil tampoco exponen mensajes internos al cliente.
+
+No se ejecutó ninguna migración ni carga remota como parte de esta implementación.
+Para verificar localmente: `npm run lint`, `npm run typecheck` y `npm run build`
+(en PowerShell con scripts bloqueados, usar `npm.cmd`). Para revisar con datos,
+usar cuentas sintéticas activas y aperturas confirmadas en un entorno de pruebas:
+comprobar cuenta sin apertura, corte confirmado, aislamiento entre dos clientes,
+cuenta inactiva y cierre de sesión. La prueba SQL `supabase/tests/clientes-rls.sql`
+también debe pasar tras añadir las columnas. La aceptación con Supabase real y
+la revisión visual autenticada siguen pendientes; no se publicaron cambios.
+
+### Desglose conciliado y apertura de un aporte sin movimientos
+
+Aplicar como postgres `supabase/migrations/202610240001_desglose_apertura.sql`
+después de las migraciones anteriores. La tabla nueva es opcional: no convierte
+los datos desconocidos de aperturas anteriores en cero. Solo se permite leer el
+desglose de una apertura propia confirmada con cuenta activa. Los clientes no
+pueden escribir. El bloqueo de la apertura impide modificar, eliminar o añadir
+desgloses después de confirmar, incluidas cargas administrativas concurrentes.
+
+La validación exige: netos = ganados - impuestos - cargos, y netos = pagados +
+capitalizados + pendientes. Se comprueba al cargar el desglose y al confirmar
+la apertura. Esta definición requiere que los impuestos y cargos registrados
+sean deducciones de intereses; otras clasificaciones requieren revisión previa.
+La tabla no cambia el saldo neto ni descuenta conceptos por segunda vez.
+
+Para el caso explícitamente confirmado de un único aporte sin retiros, pagos,
+capitalizaciones, impuestos ni cargos, usar
+`scripts/confirmar-apertura-sin-movimientos.sql`: reemplazar `REEMPLAZAR_EMAIL`
+por el correo del titular en SQL Editor y ejecutarlo como postgres. No guardar
+la copia personalizada en Git. No necesita contraseña ni clave administrativa
+en el código. Calcula el corte 30/09/2026 mediante la función ACT/365 existente,
+crea borrador y lote, registra los ceros declarados y confirma en una transacción.
+Se detiene si el cliente está inactivo, no hay exactamente un aporte, existen
+capitalizaciones o ya hay una apertura; nunca sobrescribe registros históricos.
+Los pagos o retiros fuera del modelo deben descartarse mediante revisión del
+titular: el script no puede detectar antecedentes que no estén registrados.
+
+La fuente se identifica como declaración manual, sin atribuirla a un Excel.
+Su SHA-256 corresponde al texto JSON conservado en las notas administrativas,
+con los datos de inversión y supuestos. No certifica autenticidad documental.
+La inversión original se conserva, pero el dashboard solo usa la apertura,
+evitando sumar los dos modelos. No calcula movimientos posteriores al corte.
+
+Verificación: lint y TypeScript aprobados. Next.js compiló y generó las rutas,
+pero el build terminó con un aviso de seguridad de la versión instalada; el
+reintento quedó bloqueado por EPERM al limpiar `.next/static`. El build completo
+no queda validado. Las cinco migraciones y los
+cuatro scripts SQL, incluido `supabase/tests/desglose-apertura.sql`, pasaron en
+PGlite temporal con Auth simulado; también se comprobó el script de carga con
+datos sintéticos y el rechazo de una segunda ejecución. No se añadieron
+dependencias al proyecto. Ejecutar los scripts SQL en Supabase de pruebas para
+validar permisos de la plataforma y concurrencia real. La migración y la carga
+remotas siguen pendientes; no se cargaron datos personales ni se desplegó.
