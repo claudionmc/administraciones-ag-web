@@ -1,5 +1,50 @@
 # Administraciones AG SpA
 
+## Resumen diario de intereses
+
+Aplicar manualmente como `postgres`, después de las migraciones anteriores,
+`supabase/migrations/202610290001_resumen_diario.sql`. Luego ejecutar
+`supabase/tests/resumen-diario.sql` en SQL Editor (datos sintéticos, rollback).
+No se ha aplicado esta migración remota ni se han desplegado estos cambios.
+
+El portal consulta `resumen_diario_cliente()` con la sesión del titular y RLS,
+sin claves administrativas. La función es de solo lectura: usa la fecha de
+`America/Santiago`, interés simple ACT/365 y redondeo acumulado por lote al peso.
+La fecha inicial devenga cero días; el día siguiente devenga uno. No capitaliza
+automáticamente ni suma intereses diarios previamente redondeados. Los cálculos
+monetarios se realizan con `numeric` en PostgreSQL; llegan como texto al servidor.
+
+Para clientes con apertura confirmada, utiliza sus lotes residuales desde el
+01/10/2026 y añade solo aportes posteriores al corte, evitando contar nuevamente
+las inversiones históricas. Conserva los ajustes y pendientes del saldo histórico.
+El historial confirmado se muestra separado y no se modifica. Para cuentas sin
+apertura usa sus aportes desde la fecha individual de inicio de intereses.
+Los aportes futuros no entran en el capital ni en el interés de hoy.
+
+El saldo diario es una estimación sobre registros existentes, antes de movimientos
+o deducciones posteriores no registrados y conciliados; no acredita disponibilidad
+de retiro. Si hay capitalizaciones posteriores al corte (o cualquier capitalización
+en cuentas sin apertura), el cálculo se bloquea hasta implementar su conciliación;
+no se presenta un saldo incorrecto. Retiros, pagos, cambios de tasa, impuestos y
+cargos posteriores aún requieren un modelo de movimientos y revisión.
+
+Se recalcula al abrir o recargar el portal. Una pestaña visible comprueba cada
+minuto si cambió la fecha chilena y actualiza la vista; también lo hace al volver
+a la pestaña. No requiere cron, nuevas dependencias ni escrituras diarias. Si
+falla la consulta o falta la migración, muestra indisponibilidad en lugar de cero.
+Los datos bancarios siguen fuera del esquema actual. Verificar también aislamiento
+y concurrencia en Supabase real antes de habilitarlo en producción.
+
+Validación local de este cambio: lint y TypeScript aprobados; las seis migraciones
+y los cinco archivos de pruebas SQL pasaron en PGlite temporal con Auth simulado,
+incluidos inicio con cero días, redondeo, aportes futuros, aislamiento, cuenta
+inactiva, acceso anónimo, ajustes históricos y rechazo de capitalizaciones.
+También pasaron las tres pruebas de `tests/interest-summary.test.mjs`.
+El build completo sigue pendiente: el primer intento falló al descargar Inter;
+el reintento informó una vulnerabilidad de la versión instalada de Next.js y
+falló con `EPERM` al limpiar `.next/static`. Revisar una actualización de Next.js
+compatible. Falta la prueba autenticada con la migración aplicada en Supabase.
+
 Base del sitio corporativo en Next.js con App Router, TypeScript estricto,
 Tailwind CSS y ESLint. Incluye integración local de Supabase, deshabilitada por defecto.
 

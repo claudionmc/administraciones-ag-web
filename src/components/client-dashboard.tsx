@@ -41,7 +41,8 @@ function Metric({ label, value, description }: { label: string; value: Amount; d
   </div>;
 }
 
-export function ClientDashboard({ profile, opening, lots, breakdown, unavailable, lotsUnavailable, breakdownUnavailable }: {
+export function ClientDashboard({ profile, opening, lots, breakdown, unavailable, lotsUnavailable, breakdownUnavailable, daily }: {
+  daily: React.ReactNode;
   profile: Profile | null; opening: Opening | null; lots: OpeningLot[];
   breakdown: InterestBreakdown | null;
   unavailable: boolean; lotsUnavailable: boolean; breakdownUnavailable: boolean;
@@ -75,9 +76,10 @@ export function ClientDashboard({ profile, opening, lots, breakdown, unavailable
         </div>
       </Container>
     </section>
-    <section className="bg-surface-muted py-10 sm:py-14" aria-labelledby="summary-title">
+    {daily}
+    {opening || unavailable ? <section className="bg-surface-muted py-10 sm:py-14" aria-labelledby="summary-title">
       <Container>
-        <h2 id="summary-title" className="text-2xl font-medium text-primary">Resumen de su patrimonio</h2>
+        <h2 id="summary-title" className="text-2xl font-medium text-primary">Registro histórico confirmado</h2>
         {!opening && <p role="status" className="mt-6 border border-border bg-white p-6 leading-relaxed text-text-muted">
           {unavailable ? "No fue posible consultar sus saldos. Intente nuevamente más tarde." : "Aún no hay un saldo confirmado disponible para su cuenta. Sus cifras se mostrarán una vez finalizada la revisión."}
         </p>}
@@ -127,6 +129,6 @@ export function ClientDashboard({ profile, opening, lots, breakdown, unavailable
           </div> : <p role="status" className="px-6 pb-8 text-sm text-text-muted sm:px-8">{lotsUnavailable ? "No fue posible consultar el detalle. Intente nuevamente más tarde." : "El detalle estará disponible cuando exista una apertura confirmada."}</p>}
         </section>
       </Container>
-    </section>
+    </section> : null}
   </>;
 }
