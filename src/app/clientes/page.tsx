@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { ClientDashboard, type Opening, type OpeningLot, type InterestBreakdown } from "@/components/client-dashboard";
 import { clientAccessEnabled, createClient } from "@/lib/supabase/server";
 import { DailyBalance, type DailyBalanceData } from "@/components/daily-balance";
+import { InvestmentClosings } from "@/components/investment-closings";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Área de clientes", robots: { index: false, follow: false } };
@@ -32,6 +33,7 @@ export default async function ClientsPage() {
       .eq("apertura_id", opening.id).maybeSingle(),
   ]) : [null, null];
   return <ClientDashboard profile={identity.error ? null : identity.data}
+    closings={!balance.error && !opening ? <InvestmentClosings userId={user.id} /> : null}
     daily={<DailyBalance balance={daily.error ? null : daily.data as DailyBalanceData | null} />}
     opening={opening} lots={detail?.error ? [] : (detail?.data ?? []) as OpeningLot[]}
     breakdown={breakdown?.error ? null : (breakdown?.data ?? null) as InterestBreakdown | null}

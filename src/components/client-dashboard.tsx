@@ -41,7 +41,8 @@ function Metric({ label, value, description }: { label: string; value: Amount; d
   </div>;
 }
 
-export function ClientDashboard({ profile, opening, lots, breakdown, unavailable, lotsUnavailable, breakdownUnavailable, daily }: {
+export function ClientDashboard({ profile, opening, lots, breakdown, unavailable, lotsUnavailable, breakdownUnavailable, daily, closings }: {
+  closings: React.ReactNode;
   daily: React.ReactNode;
   profile: Profile | null; opening: Opening | null; lots: OpeningLot[];
   breakdown: InterestBreakdown | null;
@@ -77,6 +78,7 @@ export function ClientDashboard({ profile, opening, lots, breakdown, unavailable
       </Container>
     </section>
     {daily}
+    {closings}
     {opening || unavailable ? <section className="bg-surface-muted py-10 sm:py-14" aria-labelledby="summary-title">
       <Container>
         <h2 id="summary-title" className="text-2xl font-medium text-primary">Registro histórico confirmado</h2>

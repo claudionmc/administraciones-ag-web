@@ -1,5 +1,31 @@
 # Administraciones AG SpA
 
+## Cierres de inversiones en el portal
+
+Para cuentas sin apertura histórica confirmada, `/clientes` muestra el último
+corte registrado en `valorizaciones_inversiones`, con una fila por inversión
+valorizada en esa fecha. Incluye capital, tasa, días, intereses acumulados,
+capitalizados, pendientes y total. No suma inversiones ni interpreta ese corte
+como saldo consolidado o total histórico de intereses de la cuenta.
+Las cuentas con apertura confirmada conservan su resumen existente.
+
+`InvestmentClosings` consulta desde el servidor con la sesión del titular,
+filtro explícito por cliente y RLS. No usa claves administrativas ni modifica
+datos. Distingue consultas fallidas de ausencia de cierres. No requiere nuevas
+migraciones ni dependencias. Los registros deben cargarse administrativamente;
+no incluir datos personales en el repositorio.
+
+Validación: `npm.cmd run lint`, `npm.cmd run typecheck` y `npm.cmd run build`.
+Para aceptación en Supabase, revisar una cuenta sin apertura con un cierre,
+una sin cierres, una con apertura confirmada y el aislamiento entre titulares.
+No se publica ni se despliega automáticamente.
+
+Comprobación local de esta integración: lint y TypeScript aprobados. El build
+compiló y generó las rutas al permitir la descarga de Inter, pero terminó con
+`SecurityFatalError` por un aviso de vulnerabilidad de la versión instalada de
+Next.js; no se considera aprobado. Revisar la actualización de Next.js antes
+de publicar. La revisión autenticada en Supabase sigue pendiente.
+
 ## Resumen diario de intereses
 
 Aplicar manualmente como `postgres`, después de las migraciones anteriores,
