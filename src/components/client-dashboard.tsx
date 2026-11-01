@@ -11,6 +11,7 @@ export type Opening = {
   intereses_pendientes: Amount;
   intereses_ganados_totales: Amount;
   saldo_neto_apertura: Amount;
+  intereses_capitalizados_reportados?: Amount;
 };
 export type OpeningLot = {
   id: string;
@@ -18,6 +19,8 @@ export type OpeningLot = {
   fecha_inicio_original: string;
   capital_vigente: Amount;
   tasa_anual: number | string;
+  intereses_reportados?: Amount;
+  total_reportado?: Amount;
 };
 export type InterestBreakdown = {
   intereses_capitalizados: Amount;
@@ -49,16 +52,17 @@ export function ClientDashboard({ profile, opening, lots, breakdown, unavailable
   unavailable: boolean; lotsUnavailable: boolean; breakdownUnavailable: boolean;
 }) {
   const name = [profile?.nombres, profile?.apellidos].filter(Boolean).join(" ");
+  const showDocumentaryLots = lots.some(lot => lot.intereses_reportados != null || lot.total_reportado != null);
   const net = netOfTaxAndCapitalization(opening?.intereses_ganados_totales ?? null,
-    breakdown?.impuestos ?? null, breakdown?.intereses_capitalizados ?? null);
+    breakdown?.impuestos ?? null, breakdown?.intereses_capitalizados ?? opening?.intereses_capitalizados_reportados ?? null);
   const showPayments = hasInterestPayments(breakdown?.intereses_pagados ?? null);
   const interestRows: [string, Amount][] = [
-    ["Capitalizados", breakdown?.intereses_capitalizados ?? null],
+    ["Capitalizados", breakdown?.intereses_capitalizados ?? opening?.intereses_capitalizados_reportados ?? null],
     ["Impuestos", breakdown?.impuestos ?? null],
     ["Netos de impuestos y capitalización", net],
     ...(showPayments ? [
       ["Pagados", breakdown?.intereses_pagados ?? null],
-      ["Pendientes de pago", opening?.intereses_pendientes ?? null],
+      ["Neto", opening?.intereses_pendientes ?? null],
     ] as [string, Amount][] : []),
   ];
   return <>
@@ -85,10 +89,11 @@ export function ClientDashboard({ profile, opening, lots, breakdown, unavailable
         {!opening && <p role="status" className="mt-6 border border-border bg-white p-6 leading-relaxed text-text-muted">
           {unavailable ? "No fue posible consultar sus saldos. Intente nuevamente más tarde." : "Aún no hay un saldo confirmado disponible para su cuenta. Sus cifras se mostrarán una vez finalizada la revisión."}
         </p>}
-        <dl className="mt-6 grid gap-4 md:grid-cols-3">
+        <dl className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <Metric label="Capital vigente" value={opening?.capital_vigente ?? null} description="Capital registrado al corte. Puede incluir intereses previamente capitalizados." />
-          <Metric label="Intereses ganados acumulados" value={opening?.intereses_ganados_totales ?? null} description="Total histórico de intereses ganados al corte confirmado." />
-          <Metric label="Saldo neto al corte" value={opening?.saldo_neto_apertura ?? null} description="Saldo confirmado, incluidos los ajustes históricos conciliados." />
+          <Metric label="Total ganados" value={opening?.intereses_ganados_totales ?? null} description="Total histórico de intereses ganados al corte confirmado." />
+          <Metric label="Neto" value={opening?.intereses_pendientes ?? null} description="Intereses no capitalizados que forman parte del saldo al corte." />
+          <Metric label="Capital más intereses netos" value={opening?.saldo_neto_apertura ?? null} description="Saldo confirmado, incluidos los ajustes históricos conciliados." />
         </dl>
         <div className="mt-10 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
           <section className="border border-border bg-white p-6 sm:p-8" aria-labelledby="interest-title">
@@ -114,18 +119,23 @@ export function ClientDashboard({ profile, opening, lots, breakdown, unavailable
         <section className="mt-10 border border-border bg-white" aria-labelledby="detail-title">
           <div className="p-6 sm:p-8"><h2 id="detail-title" className="text-xl font-medium text-primary">Detalle del capital al corte</h2>
             <p className="mt-3 text-sm leading-relaxed text-text-muted">Lotes que componen su apertura histórica, ordenados por fecha original. Esa fecha no implica un nuevo cálculo de intereses anteriores al corte.</p>
+            {showDocumentaryLots && <p className="mt-3 text-sm leading-relaxed text-text-muted">Las fechas de origen del detalle documental se infieren de los días informados. Los importes impresos se conservan: sus redondeos pueden producir diferencias con los totales del resumen, que se muestran arriba.</p>}
           </div>
           {lots.length ? <div className="overflow-x-auto p-1" tabIndex={0} role="region" aria-label="Detalle del capital: tabla desplazable">
             <table className="w-full min-w-[580px] text-left text-sm">
               <caption className="sr-only">Capital registrado al {opening && date(opening.fecha_corte)}, en CLP</caption>
               <thead className="bg-surface-muted text-primary"><tr>
-                {['Lote', 'Fecha de origen', 'Tasa anual', 'Capital vigente'].map(label => <th key={label} scope="col" className="px-6 py-4 font-medium">{label}</th>)}
+                {['Lote', showDocumentaryLots ? 'Fecha de origen inferida' : 'Fecha de origen', 'Tasa anual', 'Capital vigente', ...(showDocumentaryLots ? ['Intereses del documento', 'Total del documento'] : [])].map(label => <th key={label} scope="col" className="px-6 py-4 font-medium">{label}</th>)}
               </tr></thead>
               <tbody className="divide-y divide-border">{lots.map(lot => <tr key={lot.id}>
                 <th scope="row" className="px-6 py-5 font-medium text-primary">Lote {lot.orden_fifo}</th>
                 <td className="px-6 py-5"><time dateTime={lot.fecha_inicio_original}>{date(lot.fecha_inicio_original)}</time></td>
                 <td className="px-6 py-5 tabular-nums">{new Intl.NumberFormat("es-CL", { style: "percent", maximumFractionDigits: 4 }).format(Number(lot.tasa_anual))}</td>
                 <td className="px-6 py-5 font-medium tabular-nums text-primary">{money(lot.capital_vigente)}</td>
+                {showDocumentaryLots && <>
+                  <td className="px-6 py-5 tabular-nums">{money(lot.intereses_reportados ?? null)}</td>
+                  <td className="px-6 py-5 tabular-nums">{money(lot.total_reportado ?? null)}</td>
+                </>}
               </tr>)}</tbody>
             </table>
           </div> : <p role="status" className="px-6 pb-8 text-sm text-text-muted sm:px-8">{lotsUnavailable ? "No fue posible consultar el detalle. Intente nuevamente más tarde." : "El detalle estará disponible cuando exista una apertura confirmada."}</p>}

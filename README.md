@@ -1,5 +1,48 @@
 # Administraciones AG SpA
 
+## Cortes documentales posteriores a septiembre
+
+Aplicar `supabase/migrations/202611010002_cortes_documentales.sql` como postgres
+después de las anteriores. Permite fechas de corte finitas adicionales sin
+cambiar aperturas ya confirmadas. Admite inicio de operación en la fecha de
+corte (cero días al corte, un día a la fecha siguiente) o al día siguiente,
+manteniendo la convención de las cargas antiguas. El resumen diario existente
+ya utiliza esa fecha por apertura; no requiere reemplazar su función.
+
+Una apertura documental conserva el capital y el saldo del resumen de la
+fuente, incluida la capitalización que ya integra el capital. No reconstruye
+transferencias históricas ni vuelve a restar intereses capitalizados. Se añade
+un campo opcional para el total capitalizado reportado y dos importes opcionales
+por lote para conservar los intereses y totales impresos. No se ajustan las
+fechas o tasas para forzar coincidencias de redondeo. El hash de la fuente y
+las diferencias entre detalle y resumen se documentan en notas administrativas.
+La confirmación existente comprueba la suma de capital y la conciliación del
+resumen; después, tanto el corte como sus lotes permanecen inmutables.
+
+El portal muestra «Total ganados», «Neto», «Capital más intereses netos» y el
+capitalizado reportado cuando está disponible. Los nuevos campos se consultan
+por separado para que la ausencia de esta migración no oculte los saldos
+existentes. Solo los lotes con importes documentales muestran esas columnas,
+con una nota de fechas inferidas y redondeos. Impuestos, pagos y cargos no
+informados permanecen desconocidos. Las nuevas columnas heredan RLS y solo se
+concede lectura al cliente activo titular.
+
+Los aportes posteriores al corte se cargan en `inversiones` con su fecha y
+tasa confirmadas. El resumen diario los suma una sola vez: el aporte tiene
+cero días e intereses en su fecha inicial, aunque los lotes anteriores sigan
+devengando. Los datos personales y scripts de carga se guardan fuera de Git.
+No ejecutar cargas nuevas sobre cuentas que ya tengan inversiones o apertura
+sin revisar primero su estado.
+
+Validación local: lint, TypeScript y build aprobados; ocho migraciones y siete
+archivos de pruebas SQL aprobados en PGlite temporal con Auth simulado. La
+prueba `supabase/tests/cortes-documentales.sql` comprueba conservación de los
+redondeos de fuente, capitalización incluida una sola vez, un día después del
+corte, cero interés del aporte en su fecha inicial, inmutabilidad y aislamiento.
+La carga privada se verificó con identidad sintética y rechazo de duplicados.
+Falta aplicar la migración y ejecutar la carga en Supabase; revisar después el
+portal con la sesión del titular. No se ha desplegado ni actualizado Next.js.
+
 ## Cierres de inversiones en el portal
 
 Para cuentas sin apertura histórica confirmada, `/clientes` muestra el último
