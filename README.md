@@ -20,11 +20,37 @@ Para aceptación en Supabase, revisar una cuenta sin apertura con un cierre,
 una sin cierres, una con apertura confirmada y el aislamiento entre titulares.
 No se publica ni se despliega automáticamente.
 
-Comprobación local de esta integración: lint y TypeScript aprobados. El build
-compiló y generó las rutas al permitir la descarga de Inter, pero terminó con
-`SecurityFatalError` por un aviso de vulnerabilidad de la versión instalada de
-Next.js; no se considera aprobado. Revisar la actualización de Next.js antes
-de publicar. La revisión autenticada en Supabase sigue pendiente.
+### Intereses anteriores pagados al reinicio
+
+Aplicar como postgres `supabase/migrations/202611010001_intereses_previos_cierre.sql`
+después de las migraciones anteriores. Añade a las valorizaciones un importe
+opcional `intereses_pagados_al_reinicio`: intereses anteriores totalmente
+liquidados al iniciar el período de esa inversión. No representa pagos contra
+los intereses de ese nuevo período. Usarlo solo cuando ese reinicio completo
+esté respaldado; no sirve para retiros, pagos posteriores o impuestos.
+
+La columna generada `intereses_ganados_historicos` suma ese importe a los
+intereses acumulados del período. No modifica el capital, la tasa, los días,
+los intereses pendientes ni el saldo al corte. Un historial ausente sigue
+siendo desconocido. El portal muestra ganados históricos, pagados al reinicio
+y el neto por inversión, sin descontar los pagos otra vez. Las etiquetas del
+resumen son «Total ganados», «Pagados», «Neto» y «Capital más intereses netos».
+El neto usa los intereses del período después de capitalizaciones; no presume
+deducciones por impuestos o cargos desconocidos. Las cuentas existentes
+mantienen sus políticas RLS y permisos de lectura.
+Si falta la migración, el cierre sigue visible con un aviso de historial no
+disponible. La carga administrativa privada se conserva fuera del repositorio.
+
+Comprobación local: lint, TypeScript y build aprobados. Las siete migraciones y
+los seis archivos de pruebas SQL pasaron en PGlite temporal con Auth simulado.
+`supabase/tests/intereses-previos-cierre.sql` comprueba historial desconocido,
+conciliación sin doble descuento, pagos inválidos, lectura propia, aislamiento,
+cuenta inactiva y denegación de escritura y acceso anónimo. La carga privada
+también pasó con identidad sintética, incluida su repetición y el rechazo de
+un historial previo distinto. Falta aplicar la migración y la carga en Supabase
+y revisar la vista autenticada. No se despliega con estos pasos. El aviso de
+seguridad de Next.js observado anteriormente sigue pendiente de revisión;
+este build no implica que se haya actualizado la dependencia.
 
 ## Resumen diario de intereses
 

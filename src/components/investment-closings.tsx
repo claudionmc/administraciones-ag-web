@@ -16,6 +16,10 @@ export async function InvestmentClosings({ userId }: { userId: string }) {
     .eq("cliente_id", userId).eq("fecha_corte", cutoff).order("inversion_id") : null;
   const unavailable = Boolean(latest.error || rows?.error);
   if (!unavailable && !rows?.data?.length) return null;
+  // Separate query keeps the original closing visible before the optional migration.
+  const history = rows?.data?.length ? await supabase.from("valorizaciones_inversiones")
+    .select("id, intereses_pagados_al_reinicio, intereses_ganados_historicos")
+    .eq("cliente_id", userId).eq("fecha_corte", cutoff!) : null;
   const date = cutoff ? new Intl.DateTimeFormat("es-CL", {
     day: "2-digit", month: "long", year: "numeric", timeZone: "UTC",
   }).format(new Date(`${cutoff}T00:00:00Z`)) : null;
@@ -28,11 +32,31 @@ export async function InvestmentClosings({ userId }: { userId: string }) {
           Corte al <time dateTime={cutoff}>{date}</time>. Importes en pesos chilenos (CLP).
           Cada fila corresponde a una inversión valorizada en esa fecha; no constituye un saldo consolidado de toda su cuenta.
         </p>
+        {history?.error && <p role="status" className="mt-5 text-sm text-text-muted">El historial de intereses pagados no está disponible. El cierre del período se muestra a continuación.</p>}
+        {rows?.data?.map((row, index) => {
+          const historical = history?.data?.find(item => item.id === row.id);
+          if (historical?.intereses_pagados_al_reinicio == null || historical.intereses_ganados_historicos == null) return null;
+          return <section key={row.id} className="mt-6 border border-border bg-white p-6 sm:p-8" aria-labelledby={`interest-history-${index}`}>
+            <h3 id={`interest-history-${index}`} className="text-xl font-medium text-primary">Historial de intereses · Inversión {index + 1}</h3>
+            <dl className="mt-5 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+              {[
+                ["Total ganados", historical.intereses_ganados_historicos],
+                ["Pagados", historical.intereses_pagados_al_reinicio],
+                ["Neto", row.interes_pendiente],
+                ["Capital más intereses netos", row.total],
+              ].map(([label, value]) => <div key={label}>
+                <dt className="text-sm text-text-muted">{label}</dt>
+                <dd className="mt-3 text-2xl font-medium tabular-nums text-primary">{money(value)}</dd>
+              </div>)}
+            </dl>
+            <p className="mt-5 text-sm leading-relaxed text-text-muted">El total ganado incluye los intereses anteriores pagados al reinicio y los acumulados en el período actual. Los pagos anteriores ya fueron liquidados y no se descuentan nuevamente del capital ni del saldo al corte. El neto corresponde a los intereses del período actual, descontadas sus capitalizaciones registradas; no incorpora impuestos ni cargos que no estén registrados.</p>
+          </section>;
+        })}
         <div className="mt-6 overflow-x-auto border border-border bg-white p-1" tabIndex={0} role="region" aria-label="Cierre de inversiones: tabla desplazable">
           <table className="w-full min-w-[1000px] text-left text-sm">
             <caption className="sr-only">Inversiones valorizadas al {date}</caption>
             <thead className="bg-surface-muted text-primary"><tr>
-              {["Inversión", "Capital", "Tasa anual", "Días", "Intereses acumulados", "Intereses capitalizados", "Intereses pendientes", "Total al corte"].map(label =>
+              {["Inversión", "Capital", "Tasa anual", "Días", "Intereses acumulados", "Intereses capitalizados", "Neto", "Capital más intereses netos"].map(label =>
                 <th key={label} scope="col" className="px-5 py-4 font-medium">{label}</th>)}
             </tr></thead>
             <tbody className="divide-y divide-border">{rows?.data?.map((row, index) => <tr key={row.id}>
@@ -49,7 +73,7 @@ export async function InvestmentClosings({ userId }: { userId: string }) {
         </div>
         <p className="mt-5 text-sm leading-relaxed text-text-muted">
           El cierre conserva los cálculos registrados de interés simple ACT/365. No es el saldo de hoy ni acredita disponibilidad de retiro.
-          Los intereses de esta inversión no representan el total histórico de intereses ganados de su cuenta ni incluyen pagos históricos de otros períodos.
+          Los intereses acumulados de la tabla corresponden al período actual. El historial anterior, cuando está registrado, se presenta por separado.
         </p>
       </>}
     </Container>
