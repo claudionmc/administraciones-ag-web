@@ -25,6 +25,20 @@ union all select '82000000-0000-0000-0000-000000000001','81000000-0000-0000-0000
  'Capitalized',fecha_corte-20,2,2000,2000,0.07,299,2298 from public.aperturas_clientes
  where id='82000000-0000-0000-0000-000000000001';
 update public.aperturas_clientes set confirmada=true where id='82000000-0000-0000-0000-000000000001';
+do $$ begin
+ begin
+  insert into public.periodos_lotes_apertura(lote_id,fecha_inicio_periodo,respaldo)
+  select id,fecha_inicio_original-1,'Invalid synthetic period' from public.lotes_apertura
+  where apertura_id='82000000-0000-0000-0000-000000000001' and orden_fifo=1;
+  raise exception 'FAIL: invalid period accepted';
+ exception when raise_exception then
+  if sqlerrm <> 'Periodo incompatible con el lote confirmado' then raise; end if;
+ end;
+end $$;
+insert into public.periodos_lotes_apertura(lote_id,fecha_inicio_periodo,respaldo)
+select l.id,a.fecha_corte-20,'Synthetic confirmed reset'
+from public.lotes_apertura l join public.aperturas_clientes a on a.id=l.apertura_id
+where a.id='82000000-0000-0000-0000-000000000001' and l.orden_fifo=1;
 insert into public.inversiones(id,cliente_id,referencia,capital,fecha_inicio,tasa_anual,origen)
 values ('83000000-0000-0000-0000-000000000001','81000000-0000-0000-0000-000000000001',
  'New deposit',800,(current_timestamp at time zone 'America/Santiago')::date,0.0761,'aporte');
@@ -70,6 +84,22 @@ do $$ declare r jsonb; begin
    or not exists(select 1 from public.lotes_apertura where total_reportado=2298) then
    raise exception 'FAIL: own source columns unavailable';
  end if;
+ r:=public.resumen_diario_detallado_cliente();
+ if r->>'capital'<>'12800' or r->>'saldo_estimado'<>'13803'
+   or not exists(select 1 from jsonb_array_elements(r->'lotes') l
+     where l->>'dias_periodo'='21' and l->>'interes_acumulado_periodo'='703')
+   or not exists(select 1 from jsonb_array_elements(r->'lotes') l
+     where l->>'origen'='aporte' and l->>'dias_periodo'='0' and l->>'interes_acumulado_periodo'='0')
+   or not exists(select 1 from jsonb_array_elements(r->'lotes') l
+     where l->>'origen'='apertura' and l->>'dias_periodo' is null and l->>'interes_acumulado_periodo'='299') then
+   raise exception 'FAIL: accumulated display, unknown dates or totals changed';
+ end if;
+ begin
+   insert into public.periodos_lotes_apertura(lote_id,fecha_inicio_periodo,respaldo)
+   values(gen_random_uuid(),current_date,'Client write');
+   raise exception 'FAIL: client wrote period';
+ exception when insufficient_privilege then null;
+ end;
 end $$;
 select set_config('request.jwt.claim.sub','81000000-0000-0000-0000-000000000002',true);
 do $$ begin
@@ -77,6 +107,7 @@ do $$ begin
    or exists(select 1 from public.aperturas_clientes where intereses_capitalizados_reportados is not null) then
    raise exception 'FAIL: source columns leaked';
  end if;
+ if exists(select 1 from public.periodos_lotes_apertura) then raise exception 'FAIL: period leaked'; end if;
 end $$;
 reset role;
 rollback;

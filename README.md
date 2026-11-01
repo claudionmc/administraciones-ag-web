@@ -1,5 +1,38 @@
 # Administraciones AG SpA
 
+## Detalle acumulado de aportes
+
+Aplicar como postgres `supabase/migrations/202611010003_detalle_acumulado.sql`
+después de las anteriores. Añade `periodos_lotes_apertura` para documentar el
+inicio del período de intereses de un lote confirmado, sin modificar sus
+importes, fechas de origen ni tasas. La anotación exige respaldo, es inmutable
+y su fecha debe quedar entre el origen del lote y el corte de apertura. El
+respaldo administrativo no se expone al cliente; RLS limita la lectura de la
+fecha al titular activo. No se conceden escrituras a clientes.
+
+La función `resumen_diario_detallado_cliente()` enriquece el resultado del RPC
+existente, conservando sus totales y bloqueos. Expone por lote la fecha del
+aporte, el inicio del período, sus días transcurridos y los intereses acumulados
+(importe impreso al cierre más intereses posteriores). No recalcula el pasado
+ni capitaliza el neto. La fecha de origen no reemplaza una fecha de reinicio.
+Si no hay fecha respaldada o desglose previo, el campo correspondiente queda
+desconocido. Un aporte posterior conserva cero días e interés al inicio.
+
+Las anotaciones de fechas de cada cliente deben cargarse mediante un script
+privado fuera de Git. El portal utiliza el nuevo RPC y, solo si no existe en
+PostgREST, consulta el anterior: para lotes históricos nunca presenta los días
+desde el corte como si fueran los días acumulados del período. Los intereses
+por fila conservan redondeos de fuente y pueden diferir del total del resumen.
+
+Validación: lint, TypeScript y build aprobados; nueve migraciones y siete
+archivos de pruebas SQL aprobados en PGlite temporal con Auth simulado. Las
+pruebas incluyen período anterior al origen rechazado, historial acumulado,
+fechas desconocidas, cero días e interés de aportes nuevos, totales financieros
+idénticos, aislamiento y denegación de escritura. La anotación privada se probó
+con identidad sintética, incluidos los 53 lotes y repetición sin duplicados.
+Falta ejecutar la migración y las anotaciones en Supabase, y revisar la vista
+autenticada. No se ha desplegado.
+
 ## Cortes documentales posteriores a septiembre
 
 Aplicar `supabase/migrations/202611010002_cortes_documentales.sql` como postgres

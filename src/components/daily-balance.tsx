@@ -11,6 +11,9 @@ export type DailyBalanceData = {
   lotes: {
     id: string; origen: string; fecha_origen: string; fecha_inicio: string;
     capital: string; tasa_anual: string; dias: number; interes: string;
+    fecha_inicio_periodo?: string | null;
+    dias_periodo?: number | null;
+    interes_acumulado_periodo?: string | null;
   }[];
 };
 
@@ -50,26 +53,32 @@ export function DailyBalance({ balance }: { balance: DailyBalanceData | null }) 
           </p>
           <p className="mt-3 text-sm leading-relaxed text-text-muted">
             {balance.desde_apertura
-              ? `El cálculo conserva el saldo histórico confirmado y añade los aportes posteriores y sus intereses. Intereses nuevos desde la apertura: ${money(balance.intereses_nuevos)}.`
+              ? "El cálculo conserva el saldo histórico confirmado y añade los aportes posteriores y sus intereses. El detalle muestra los intereses del documento más los generados después del cierre, cuando existe ese desglose."
               : "El cálculo utiliza los aportes registrados y sus tasas anuales."}
             {" "}El saldo estimado no acredita un monto disponible para retiro. No incorpora pagos, retiros, impuestos, cargos ni cambios de tasa posteriores que no estén registrados y conciliados.
           </p>
           <div className="mt-8 overflow-x-auto border border-border bg-white p-1" tabIndex={0} role="region" aria-label="Aportes e intereses: tabla desplazable">
             <table className="w-full min-w-[700px] text-left text-sm">
-              <caption className="p-5 text-left font-medium text-primary">Detalle del cálculo diario</caption>
+              <caption className="p-5 text-left font-medium text-primary">Detalle de aportes e intereses acumulados</caption>
               <thead className="bg-surface-muted text-primary"><tr>
-                {["Origen", "Inicio de intereses", "Tasa anual", "Capital", "Días", "Intereses nuevos"].map(label => <th key={label} scope="col" className="px-5 py-4 font-medium">{label}</th>)}
+                {["Origen", "Fecha del aporte", "Inicio del período de intereses", "Tasa anual", "Capital", "Días del período", "Intereses acumulados"].map(label => <th key={label} scope="col" className="px-5 py-4 font-medium">{label}</th>)}
               </tr></thead>
-              <tbody className="divide-y divide-border">{balance.lotes.map(lot => <tr key={`${lot.origen}-${lot.id}`}>
+              <tbody className="divide-y divide-border">{balance.lotes.map(lot => {
+                const start = lot.fecha_inicio_periodo ?? (lot.origen === "aporte" ? lot.fecha_inicio : null);
+                const days = lot.dias_periodo ?? (lot.origen === "aporte" ? lot.dias : null);
+                const interest = lot.interes_acumulado_periodo ?? (lot.origen === "aporte" ? lot.interes : null);
+                return <tr key={`${lot.origen}-${lot.id}`}>
                 <th scope="row" className="px-5 py-4 font-medium">{lot.origen === "apertura" ? "Lote histórico" : "Aporte"}</th>
-                <td className="px-5 py-4"><time dateTime={lot.fecha_inicio}>{date(lot.fecha_inicio)}</time></td>
+                <td className="px-5 py-4"><time dateTime={lot.fecha_origen}>{date(lot.fecha_origen)}</time></td>
+                <td className="px-5 py-4">{start ? <time dateTime={start}>{date(start)}</time> : "Información pendiente"}</td>
                 <td className="px-5 py-4 tabular-nums">{new Intl.NumberFormat("es-CL", { style: "percent", maximumFractionDigits: 4 }).format(Number(lot.tasa_anual))}</td>
                 <td className="px-5 py-4 tabular-nums">{money(lot.capital)}</td>
-                <td className="px-5 py-4 tabular-nums">{lot.dias}</td>
-                <td className="px-5 py-4 tabular-nums">{money(lot.interes)}</td>
-              </tr>)}</tbody>
+                <td className="px-5 py-4 tabular-nums">{days ?? "Información pendiente"}</td>
+                <td className="px-5 py-4 tabular-nums">{interest !== null ? money(interest) : "Información pendiente"}</td>
+              </tr>;})}</tbody>
             </table>
           </div>
+          <p className="mt-3 text-sm leading-relaxed text-text-muted">Los días corresponden al período de intereses, que puede comenzar después de la fecha del aporte si hubo un reinicio. Los importes acumulados por lote conservan los redondeos del documento y pueden diferir del total del resumen. Un dato sin respaldo se muestra como información pendiente.</p>
         </>}
       </>}
     </Container>

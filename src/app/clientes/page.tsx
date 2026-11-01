@@ -21,7 +21,8 @@ export default async function ClientsPage() {
     supabase.from("aperturas_clientes")
       .select("id, fecha_corte, capital_vigente, intereses_pendientes, intereses_ganados_totales, saldo_neto_apertura")
       .eq("cliente_id", user.id).eq("confirmada", true).maybeSingle(),
-    supabase.rpc("resumen_diario_cliente"),
+    supabase.rpc("resumen_diario_detallado_cliente").then(result =>
+      result.error?.code === "PGRST202" ? supabase.rpc("resumen_diario_cliente") : result),
   ]);
   const opening = balance.error ? null : balance.data as Opening | null;
   const [detail, breakdown, documentary, documentaryLots] = opening ? await Promise.all([supabase.from("lotes_apertura")
